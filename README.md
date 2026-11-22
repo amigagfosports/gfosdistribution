@@ -1,41 +1,47 @@
 # GFOS distribution
 
-Base bootable images that take a machine to GFOS: write one to a USB stick, an NVMe drive or an SD card, and
-start the machine from it.
+The released GFOS: the base images that take a machine to GFOS, and the released software and firmware that go
+on it. The GFOS software store looks here.
 
-A base image is a starting point. It is not kept up to date afterwards: once a machine is GFOS, the GFOS
-software store does the last mile and every update after it.
+## What is here
 
-## Machines
+| Folder | Holds |
+| --- | --- |
+| `images/` | Base bootable images, one folder per machine: write one to a USB stick, an NVMe drive or an SD card and start the machine from it |
+| `software/` | Released software: what the store offers, with its catalogue |
+| `firmware/` | Released firmware |
+
+Only released things are here. Work in progress stays in each project's own repository.
+
+## Base images
 
 | Folder | Machine | Image |
 | --- | --- | --- |
-| `cm4/` | Raspberry Pi Compute Module 4 | not built yet |
-| `cm5/` | Raspberry Pi Compute Module 5 | not built yet |
-| `pi4/` | Raspberry Pi 4 | not built yet |
-| `pi5/` | Raspberry Pi 5 | not built yet |
-| `x86/` | x86-64 appliance | not built yet |
+| `images/cm4/` | Raspberry Pi Compute Module 4 | not built yet |
+| `images/cm5/` | Raspberry Pi Compute Module 5 | not built yet |
+| `images/pi4/` | Raspberry Pi 4 | not built yet |
+| `images/pi5/` | Raspberry Pi 5 | not built yet |
+| `images/x86/` | x86-64 | not built yet |
 
-Planned, when we do them: `riscv/` and `ppc/`.
+Planned, when we do them: `images/riscv/` and `images/ppc/`.
 
-## What is in a machine's folder
+A base image is a starting point. It is not kept up to date afterwards: once a machine is GFOS, the store does
+the last mile and every update after it.
 
-- `README.md`: the machine, what the image needs, how to write it, and what is known not to work yet.
-- `base.lock`: the base config, the parts in the image and their versions. The image builder installs exactly
-  that list.
-- `SHA256SUMS`: the checksum of each published image.
+Each machine's folder has a `README.md` (what the image needs and how to write it), a `base.lock` (the base
+config: the parts in the image and their versions) and, once an image is published, its `SHA256SUMS`.
 
-The image files themselves are too big for git. Each published image is a file on a release of this repository,
-named `gfos-<machine>-<version>.img.xz`, with its checksum in the machine's `SHA256SUMS`.
+## Where the files are
 
-## What a base image is not
+Images, archives and firmware files are too big for git. Each is a file on a release of this repository, with its
+SHA-256 beside its entry here, so anything fetched can be checked.
 
-- It holds no AmigaOS files and no Kickstart ROM: you supply your own, as GFOpenUp asks.
-- It is not a copy of one of our test machines. Those copies hold things that stay inside the testing team and
-  are never published here.
+## What is not here
 
-## Changing a base config
+No AmigaOS files and no Kickstart ROM: you supply your own, as GFOpenUp asks.
 
-A change to a `base.lock` is a pull request to this repository.
+## Changing what is released
 
-MIT, Copyright (c) 2026 The AmiCradle Team, for our own files.
+A change here is a pull request.
+
+MIT, Copyright (c) 2026 The AmiCradle Team, for our own files. Third-party parts keep their own licences.
