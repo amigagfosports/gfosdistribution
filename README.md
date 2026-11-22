@@ -10,6 +10,7 @@ on it. The GFOS software store looks here.
 | `images/` | Base bootable images, one folder per machine: write one to a USB stick, an NVMe drive or an SD card and start the machine from it |
 | `software/` | Released software: what the store offers, with its catalogue |
 | `firmware/` | Released firmware |
+| `imager/` | The GFOS Imager: a program for a PC or a Pi that picks the right base image, checks it and writes it to a drive, without fuss |
 
 Only released things are here. Work in progress stays in each project's own repository.
 
