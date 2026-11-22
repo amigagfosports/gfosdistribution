@@ -25,6 +25,7 @@
 <h1>GFOS Imager <small id="ver"></small></h1>
 <p class="lead">Writes a GFOS base image to a USB drive, NVMe or SD card. The base image starts your machine; GFOS fetches the rest once it's running.</p>
 
+<section id="warn" hidden style="border-color:var(--bad)"><b class="bad">Test build, not for release.</b> <span id="warnsay"></span></section>
 <section><h2><b>1</b>Choose the image</h2>
   <div class="tabs" id="machines"></div><div id="images" class="dim">Looking for the published images…</div>
   <p class="dim" style="margin:12px 0 4px">Or use an image file you already have (.img or .img.gz): type or paste where it is.</p>
@@ -86,5 +87,5 @@ $("#go").onclick = async () => {
 $("#file").oninput = () => { if ($("#file").value.trim()) { image = null; showImages(); } ready(); };
 $("#sure").onchange = ready; $("#again").onclick = loadDrives;
 $("#quit").onclick = async () => { try { await api("/api/quit"); } catch (e) {} document.body.innerHTML = "<main><h1>GFOS Imager is closed.</h1><p class='lead'>You can close this tab.</p></main>"; };
-api("/api/about").then(a => $("#ver").textContent = a.version); loadImages(); loadDrives();
+api("/api/about").then(a => { $("#ver").textContent = a.version; if (!a.proven) { $("#warn").hidden = false; $("#warnsay").textContent = a.testing ? "Writing is switched on for testing. It has not been proven on this system: use a drive you can afford to lose." : "It hasn't been proven on a real card on this system, so it won't write to a drive yet."; } }); loadImages(); loadDrives();
 </script></body></html>
