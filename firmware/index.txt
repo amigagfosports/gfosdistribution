@@ -1,0 +1,1 @@
+# GFOS firmware: name, version, size, sha256, address, description (tabs between)
