@@ -63,3 +63,9 @@ func elevated(self string, args ...string) error {
 }
 
 func openBrowser(url string) { exec.Command("open", url).Start() }
+
+// pickFile: the Mac's own "choose a file" window. Empty: the person cancelled.
+func pickFile() (string, error) {
+	out, _ := exec.Command("osascript", "-e", `POSIX path of (choose file with prompt "Choose the image")`).Output()
+	return strings.TrimSpace(string(out)), nil
+}

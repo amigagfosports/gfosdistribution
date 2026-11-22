@@ -28,9 +28,10 @@
 
 <section id="warn" hidden style="border-color:var(--bad)"><b class="bad">Test build, not for release.</b> <span id="warnsay"></span></section>
 <section><h2><b>1</b>Choose the image</h2>
+  <p class="dim" style="margin:0 0 6px"><b style="color:var(--ink)">From the GFOS distribution</b> <button class="link" id="relist">Look again</button></p>
   <div class="tabs" id="machines"></div><div id="images" class="dim">Looking for the published images…</div>
-  <p class="dim" style="margin:12px 0 4px">Or use an image file you already have (.img, .img.xz or .img.gz): type or paste where it is.</p>
-  <input type="text" id="file" placeholder="/home/you/Downloads/gfos-base.img.xz">
+  <p class="dim" style="margin:14px 0 6px"><b style="color:var(--ink)">Or one you already have</b> (.img, .img.xz or .img.gz)</p>
+  <div style="display:flex;gap:8px"><button class="go" id="pick" style="white-space:nowrap;padding:9px 16px">Choose a file…</button><input type="text" id="file" placeholder="or type or paste where it is"></div>
 </section>
 
 <section><h2><b>2</b>Choose the drive</h2>
@@ -97,6 +98,8 @@ $("#go").onclick = async () => {
   catch (e) { busy = false; $("#say").innerHTML = `<span class="bad">${esc(e.message)}</span>`; ready(); }
 };
 $("#file").oninput = () => { if ($("#file").value.trim()) { image = null; showImages(); } ready(); };
+$("#relist").onclick = loadImages;
+$("#pick").onclick = async () => { try { const r = await api("/api/pick"); if (r.file) { $("#file").value = r.file; $("#file").oninput(); } } catch (e) { $("#file").placeholder = e.message; $("#file").focus(); } };
 $("#sure").onchange = ready; $("#big").onchange = loadDrives;
 $("#nshow").onchange = () => { for (const i of ["#nwifi", "#nssh"]) $(i).type = $("#nshow").checked ? "text" : "password"; }; $("#again").onclick = loadDrives;
 $("#quit").onclick = async () => { try { await api("/api/quit"); } catch (e) {} document.body.innerHTML = "<header>GFOS Imager is closed.</header><main><p class='lead'>You can close this tab.</p></main>"; };

@@ -184,6 +184,10 @@ func window() {
 		}()
 		js(w, map[string]bool{"started": true}, nil)
 	}))
+	mux.HandleFunc("/api/pick", guard(func(w http.ResponseWriter, r *http.Request) {
+		p, err := pickFile()
+		js(w, map[string]string{"file": p}, err)
+	}))
 	mux.HandleFunc("/api/quit", guard(func(w http.ResponseWriter, r *http.Request) { js(w, map[string]bool{"bye": true}, nil); go func() { time.Sleep(300 * time.Millisecond); os.Exit(0) }() }))
 	url := fmt.Sprintf("http://%s/?k=%s", ln.Addr(), key)
 	fmt.Println("GFOS Imager", Version, "is open in your browser. If it isn't, go to:\n ", url, "\nClose this window (or press Ctrl+C) to stop it.")

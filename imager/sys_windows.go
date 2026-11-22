@@ -62,3 +62,12 @@ func elevated(self string, args ...string) error {
 }
 
 func openBrowser(url string) { exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start() }
+
+// pickFile: Windows' own "open a file" window. Empty: the person cancelled.
+func pickFile() (string, error) {
+	out, _ := exec.Command("powershell", "-NoProfile", "-STA", "-Command",
+		`Add-Type -AssemblyName System.Windows.Forms; $d = New-Object System.Windows.Forms.OpenFileDialog; `+
+			`$d.Title = 'Choose the image'; $d.Filter = 'Images|*.img;*.xz;*.gz|All files|*.*'; `+
+			`if ($d.ShowDialog() -eq 'OK') { $d.FileName }`).Output()
+	return strings.TrimSpace(string(out)), nil
+}
