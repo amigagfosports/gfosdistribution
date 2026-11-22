@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>GFOS Imager</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { --bg:#10141b; --card:#19202b; --line:#2b3545; --ink:#e7ecf3; --dim:#93a0b4; --go:#3d8bfd; --ok:#39b980; --bad:#e5604d; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.45 system-ui, "Segoe UI", sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 28px 18px 60px; }
+  h1 { font-size: 26px; margin: 0 0 4px; } h1 small { color:var(--dim); font-size:14px; font-weight:400; }
+  p.lead { color:var(--dim); margin:0 0 22px; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px 18px; margin-bottom:14px; }
+  h2 { font-size:17px; margin:0 0 10px; } h2 b { display:inline-block; width:26px; height:26px; line-height:26px; text-align:center; border-radius:50%; background:var(--line); margin-right:8px; font-size:14px; }
+  .pick { display:block; width:100%; text-align:left; background:none; color:inherit; font:inherit; border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin:6px 0; cursor:pointer; }
+  .pick:hover { border-color:var(--dim); } .pick.on { border-color:var(--go); background:#1d2a40; }
+  .pick span { color:var(--dim); font-size:14px; display:block; }
+  .tabs button { background:none; border:1px solid var(--line); color:var(--ink); border-radius:16px; padding:4px 13px; margin:0 6px 8px 0; cursor:pointer; font:inherit; font-size:14px; }
+  .tabs button.on { background:var(--go); border-color:var(--go); }
+  input[type=text] { width:100%; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:9px 11px; font:inherit; }
+  .dim { color:var(--dim); font-size:14px; } .bad { color:var(--bad); } .ok { color:var(--ok); }
+  button.go { background:var(--go); color:#fff; border:0; border-radius:8px; padding:11px 22px; font:inherit; font-weight:600; cursor:pointer; }
+  button.go:disabled { opacity:.4; cursor:default; } button.link { background:none; border:0; color:var(--go); cursor:pointer; font:inherit; padding:0; }
+  .bar { height:14px; background:var(--bg); border-radius:7px; overflow:hidden; margin:10px 0 6px; } .bar i { display:block; height:100%; width:0; background:var(--go); transition:width .3s; }
+  label { display:block; margin:10px 0; }
+</style></head><body><main>
+<h1>GFOS Imager <small id="ver"></small></h1>
+<p class="lead">Writes a GFOS base image to a USB drive, NVMe or SD card. The base image starts your machine; GFOS fetches the rest once it's running.</p>
+
+<section><h2><b>1</b>Choose the image</h2>
+  <div class="tabs" id="machines"></div><div id="images" class="dim">Looking for the published images…</div>
+  <p class="dim" style="margin:12px 0 4px">Or use an image file you already have (.img or .img.gz): type or paste where it is.</p>
+  <input type="text" id="file" placeholder="/home/you/Downloads/gfos-base.img.gz">
+</section>
+
+<section><h2><b>2</b>Choose the drive</h2>
+  <div id="drives" class="dim">Looking for drives…</div>
+  <p class="dim">Only removable drives are shown, never the one this computer runs from. <button class="link" id="again">Look again</button></p>
+</section>
+
+<section><h2><b>3</b>Write it</h2>
+  <label><input type="checkbox" id="sure"> I understand everything on the chosen drive will be erased.</label>
+  <button class="go" id="go" disabled>Write the image</button>
+  <div id="work" hidden><div class="bar"><i id="fill"></i></div><div id="say" class="dim"></div></div>
+</section>
+<p class="dim">When you're done: <button class="link" id="quit">close GFOS Imager</button></p>
+</main><script>
+const k = new URLSearchParams(location.search).get("k"), $ = s => document.querySelector(s);
+const api = async (p, body) => { const r = await fetch(p + "?k=" + k, body ? { method: "POST", body: JSON.stringify(body) } : {}); const j = await r.json(); if (!r.ok) throw new Error(j.error); return j; };
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const gb = n => n >= 1e9 ? (n / 1e9).toFixed(1) + " GB" : Math.round(n / 1e6) + " MB";
+const NAMES = { cm4: "Compute Module 4", cm5: "Compute Module 5", pi4: "Raspberry Pi 4", pi5: "Raspberry Pi 5", x86: "PC (x86-64)" };
+let all = [], machine = "", image = null, drive = "", busy = false;
+function ready() { $("#go").disabled = busy || !drive || !$("#sure").checked || !(image || $("#file").value.trim()); }
+function showImages() {
+  const ms = [...new Set(all.map(i => i.machine))];
+  if (!machine || !ms.includes(machine)) machine = ms[0] || "";
+  $("#machines").innerHTML = ms.map(m => `<button class="${m === machine ? "on" : ""}" data-m="${esc(m)}">${esc(NAMES[m] || m)}</button>`).join("");
+  const list = all.filter(i => i.machine === machine);
+  $("#images").innerHTML = list.map((i, n) => `<button class="pick ${image === i ? "on" : ""}" data-i="${all.indexOf(i)}"><b>${esc(i.name)} ${esc(i.version)}</b><span>${gb(i.size)}${i.released ? " · released " + esc(i.released) : ""}${i.notes ? " · " + esc(i.notes) : ""}</span></button>`).join("") || `<span class="dim">No images are published yet.</span>`;
+  document.querySelectorAll("[data-m]").forEach(b => b.onclick = () => { machine = b.dataset.m; image = null; showImages(); });
+  document.querySelectorAll("[data-i]").forEach(b => b.onclick = () => { image = all[+b.dataset.i]; $("#file").value = ""; showImages(); });
+  ready();
+}
+async function loadImages() { try { all = await api("/api/images") || []; showImages(); } catch (e) { $("#images").innerHTML = `<span class="bad">${esc(e.message)}</span> You can still use a file of your own below.`; } }
+async function loadDrives() {
+  try {
+    const ds = await api("/api/drives"); if (!ds.some(d => d.path === drive)) drive = "";
+    $("#drives").innerHTML = ds.map(d => `<button class="pick ${d.path === drive ? "on" : ""}" data-d="${esc(d.path)}"><b>${esc(d.name)}</b><span>${gb(d.size)} · ${esc(d.via || "removable")} · ${esc(d.path)}</span></button>`).join("") || `<span class="dim">No removable drive found. Plug one in and look again.</span>`;
+    document.querySelectorAll("[data-d]").forEach(b => b.onclick = () => { drive = b.dataset.d; loadDrives(); });
+  } catch (e) { $("#drives").innerHTML = `<span class="bad">${esc(e.message)}</span>`; }
+  ready();
+}
+const WORDS = { downloading: "Downloading the image", checking: "Checking the image", waiting: "Waiting for you to allow the write", writing: "Writing to the drive", verifying: "Reading it back to check" };
+async function watch() {
+  const p = await api("/api/progress"); const pc = p.total > 0 ? Math.min(100, p.done * 100 / p.total) : 0;
+  $("#fill").style.width = (p.phase === "done" ? 100 : pc) + "%";
+  if (p.phase === "done") { busy = false; $("#say").innerHTML = `<span class="ok">Done: written and checked. You can take the drive out.</span>`; $("#sure").checked = false; return ready(); }
+  if (p.phase === "failed") { busy = false; $("#say").innerHTML = `<span class="bad">${esc(p.note || "It failed.")}</span>`; return ready(); }
+  $("#say").textContent = (WORDS[p.phase] || p.phase) + (p.total > 0 ? ` · ${Math.round(pc)}%` : p.done ? ` · ${gb(p.done)}` : "") + (p.phase === "waiting" && p.note ? ": " + p.note : "");
+  setTimeout(watch, 500);
+}
+$("#go").onclick = async () => {
+  busy = true; ready(); $("#work").hidden = false; $("#fill").style.width = "0"; $("#say").textContent = "Starting…";
+  try { await api("/api/write", { image: $("#file").value.trim() ? null : image, file: $("#file").value.trim(), drive }); watch(); }
+  catch (e) { busy = false; $("#say").innerHTML = `<span class="bad">${esc(e.message)}</span>`; ready(); }
+};
+$("#file").oninput = () => { if ($("#file").value.trim()) { image = null; showImages(); } ready(); };
+$("#sure").onchange = ready; $("#again").onclick = loadDrives;
+$("#quit").onclick = async () => { try { await api("/api/quit"); } catch (e) {} document.body.innerHTML = "<main><h1>GFOS Imager is closed.</h1><p class='lead'>You can close this tab.</p></main>"; };
+api("/api/about").then(a => $("#ver").textContent = a.version); loadImages(); loadDrives();
+</script></body></html>
