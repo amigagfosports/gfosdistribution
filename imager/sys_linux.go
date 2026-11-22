@@ -56,6 +56,24 @@ func release(d Drive) error {
 
 func eject(d Drive) { run("sync") }
 
+// putOnBoot: a file onto the card's FAT (boot) partition.
+func putOnBoot(d Drive, name string, data []byte) error {
+	run("partprobe", d.Path); run("udevadm", "settle")
+	out, _ := run("lsblk", "-ln", "-o", "PATH,FSTYPE", d.Path)
+	part := ""
+	for _, l := range strings.Split(out, "\n") {
+		if f := strings.Fields(l); len(f) == 2 && f[1] == "vfat" && part == "" { part = f[0] }
+	}
+	if part == "" { return errors.New("the card has no FAT partition to put them on") }
+	dir, err := os.MkdirTemp("", "gfos-imager-boot"); if err != nil { return err }
+	defer os.Remove(dir)
+	if _, err := run("mount", "-t", "vfat", part, dir); err != nil { return err }
+	werr := os.WriteFile(dir+"/"+name, data, 0600)
+	run("sync")
+	if _, err := run("umount", dir); err != nil && werr == nil { werr = err }
+	return werr
+}
+
 func elevated(self string, args ...string) error {
 	if os.Geteuid() == 0 { _, err := run(self, args...); return err }
 	if _, err := exec.LookPath("pkexec"); err != nil {

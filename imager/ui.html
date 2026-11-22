@@ -22,14 +22,15 @@
   button.go:disabled { opacity:.4; cursor:default; } button.link { background:none; border:0; color:var(--go); cursor:pointer; font:inherit; padding:0; }
   .bar { height:14px; background:var(--bg); border-radius:7px; overflow:hidden; margin:10px 0 6px; } .bar i { display:block; height:100%; width:0; background:var(--go); transition:width .3s; }
   label { display:block; margin:10px 0; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; } input[type=password] { width:100%; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:9px 11px; font:inherit; }
 </style></head><body><header>GFOS Imager <small id="ver"></small></header><main>
 <p class="lead">Writes a GFOS base image to a USB drive, NVMe or SD card. The base image starts your machine; GFOS fetches the rest once it's running.</p>
 
 <section id="warn" hidden style="border-color:var(--bad)"><b class="bad">Test build, not for release.</b> <span id="warnsay"></span></section>
 <section><h2><b>1</b>Choose the image</h2>
   <div class="tabs" id="machines"></div><div id="images" class="dim">Looking for the published images…</div>
-  <p class="dim" style="margin:12px 0 4px">Or use an image file you already have (.img or .img.gz): type or paste where it is.</p>
-  <input type="text" id="file" placeholder="/home/you/Downloads/gfos-base.img.gz">
+  <p class="dim" style="margin:12px 0 4px">Or use an image file you already have (.img, .img.xz or .img.gz): type or paste where it is.</p>
+  <input type="text" id="file" placeholder="/home/you/Downloads/gfos-base.img.xz">
 </section>
 
 <section><h2><b>2</b>Choose the drive</h2>
@@ -38,7 +39,15 @@
   <label class="dim"><input type="checkbox" id="big"> Show large drives (over 256 GB). <span id="hid"></span></label>
 </section>
 
-<section><h2><b>3</b>Write it</h2>
+<section><h2><b>3</b>Settings for the card <small class="dim" style="font-weight:400">(optional)</small></h2>
+  <p class="dim" style="margin-top:0">So the card joins your network at its first start. Leave them empty and the card asks on its own screen instead.</p>
+  <div class="grid"><input type="text" id="nssid" placeholder="Wi-Fi network name" autocomplete="off"><input type="password" id="nwifi" placeholder="Wi-Fi password" autocomplete="new-password">
+  <input type="text" id="nhost" placeholder="Name for the machine (amicradle)" autocomplete="off"><input type="text" id="ncountry" placeholder="Wi-Fi country (GB)" maxlength="2" autocomplete="off">
+  <input type="password" id="nssh" placeholder="SSH password (turns SSH on)" autocomplete="new-password"><label class="dim" style="margin:0;align-self:center"><input type="checkbox" id="nshow"> Show passwords</label></div>
+  <p class="dim">They go onto the card as a file it reads once; the card takes the passwords out after using them. They aren't kept on this computer.</p>
+</section>
+
+<section><h2><b>4</b>Write it</h2>
   <label><input type="checkbox" id="sure"> I understand everything on the chosen drive will be erased.</label>
   <button class="go" id="go" disabled>Write the image</button>
   <div id="work" hidden><div class="bar"><i id="fill"></i></div><div id="say" class="dim"></div></div>
@@ -73,7 +82,7 @@ async function loadDrives() {
   } catch (e) { $("#drives").innerHTML = `<span class="bad">${esc(e.message)}</span>`; }
   ready();
 }
-const WORDS = { downloading: "Downloading the image", checking: "Checking the image", waiting: "Waiting for you to allow the write", writing: "Writing to the drive", verifying: "Reading it back to check" };
+const WORDS = { downloading: "Downloading the image", checking: "Checking the image", waiting: "Waiting for you to allow the write", writing: "Writing to the drive", verifying: "Reading it back to check", settings: "Putting your settings on the card" };
 async function watch() {
   const p = await api("/api/progress"); const pc = p.total > 0 ? Math.min(100, p.done * 100 / p.total) : 0;
   $("#fill").style.width = (p.phase === "done" ? 100 : pc) + "%";
@@ -84,11 +93,12 @@ async function watch() {
 }
 $("#go").onclick = async () => {
   busy = true; ready(); $("#work").hidden = false; $("#fill").style.width = "0"; $("#say").textContent = "Starting…";
-  try { await api("/api/write", { image: $("#file").value.trim() ? null : image, file: $("#file").value.trim(), drive, large: $("#big").checked }); watch(); }
+  try { await api("/api/write", { image: $("#file").value.trim() ? null : image, file: $("#file").value.trim(), drive, large: $("#big").checked, net: { ssid: $("#nssid").value.trim(), wifiPassword: $("#nwifi").value, hostname: $("#nhost").value.trim(), country: $("#ncountry").value.trim(), sshPassword: $("#nssh").value } }); watch(); }
   catch (e) { busy = false; $("#say").innerHTML = `<span class="bad">${esc(e.message)}</span>`; ready(); }
 };
 $("#file").oninput = () => { if ($("#file").value.trim()) { image = null; showImages(); } ready(); };
-$("#sure").onchange = ready; $("#big").onchange = loadDrives; $("#again").onclick = loadDrives;
+$("#sure").onchange = ready; $("#big").onchange = loadDrives;
+$("#nshow").onchange = () => { for (const i of ["#nwifi", "#nssh"]) $(i).type = $("#nshow").checked ? "text" : "password"; }; $("#again").onclick = loadDrives;
 $("#quit").onclick = async () => { try { await api("/api/quit"); } catch (e) {} document.body.innerHTML = "<header>GFOS Imager is closed.</header><main><p class='lead'>You can close this tab.</p></main>"; };
 api("/api/about").then(a => { $("#ver").textContent = a.version; if (!a.proven) { $("#warn").hidden = false; $("#warnsay").textContent = a.testing ? "Writing is switched on for testing. It has not been proven on this system: use a drive you can afford to lose." : "It hasn't been proven on a real card on this system, so it won't write to a drive yet."; } }); loadImages(); loadDrives();
 </script></body></html>

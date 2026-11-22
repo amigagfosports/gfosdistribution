@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -34,6 +36,18 @@ func release(d Drive) error {
 		`if ($d.IsReadOnly) { Set-Disk -Number ` + n + ` -IsReadOnly $false }; ` +
 		`if ($d.PartitionStyle -ne 'RAW') { Clear-Disk -Number ` + n + ` -RemoveData -RemoveOEM -Confirm:$false }`)
 	return err
+}
+
+// putOnBoot: a file onto the card's FAT (boot) partition. Not yet run on a real Windows PC.
+func putOnBoot(d Drive, name string, data []byte) error {
+	n := number(d)
+	out, err := ps(`Update-HostStorageCache; Start-Sleep -Seconds 2; ` +
+		`$p = Get-Partition -DiskNumber ` + n + ` | Where-Object { (Get-Volume -Partition $_ -ErrorAction SilentlyContinue).FileSystem -like 'FAT*' } | Select-Object -First 1; ` +
+		`if (-not $p) { exit 3 }; if (-not $p.DriveLetter) { $p | Add-PartitionAccessPath -AssignDriveLetter; ` +
+		`$p = Get-Partition -DiskNumber ` + n + ` -PartitionNumber $p.PartitionNumber }; Write-Output $p.DriveLetter`)
+	letter := strings.TrimSpace(out)
+	if err != nil || len(letter) != 1 { return errors.New("the card's FAT partition didn't get a drive letter") }
+	return os.WriteFile(letter+`:\`+name, data, 0600)
 }
 
 func eject(d Drive) { ps(`Update-HostStorageCache`) }

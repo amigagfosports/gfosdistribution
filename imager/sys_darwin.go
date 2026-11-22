@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"regexp"
@@ -34,6 +35,21 @@ func drives() ([]Drive, error) {
 func plain(d Drive) string { return strings.Replace(d.Path, "/dev/r", "/dev/", 1) }
 
 func release(d Drive) error { _, err := run("diskutil", "unmountDisk", "force", plain(d)); return err }
+
+var mountLine = regexp.MustCompile(`Mount Point:\s*(/.+)`)
+
+// putOnBoot: a file onto the card's FAT (boot) partition. Not yet run on a real Mac.
+func putOnBoot(d Drive, name string, data []byte) error {
+	run("diskutil", "mountDisk", plain(d))
+	for _, slice := range []string{"s1", "s15", "s2"} {
+		info, _ := run("diskutil", "info", plain(d)+slice)
+		if !strings.Contains(info, "FAT") && !strings.Contains(info, "MS-DOS") { continue }
+		if m := mountLine.FindStringSubmatch(info); m != nil {
+			return os.WriteFile(strings.TrimSpace(m[1])+"/"+name, data, 0600)
+		}
+	}
+	return errors.New("the card's FAT partition didn't mount")
+}
 
 func eject(d Drive) { run("diskutil", "eject", plain(d)) }
 

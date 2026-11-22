@@ -8,6 +8,7 @@
 package main
 
 import (
+	"bufio"
 	"compress/gzip"
 	"crypto/rand"
 	"crypto/sha256"
@@ -27,6 +28,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/ulikunitz/xz"
 )
 
 const Version = "0.1"
@@ -64,6 +67,40 @@ type Drive struct {
 	Via   string `json:"via"`   // usb, sd...
 }
 
+// Net: what the card should be told about its network, put on its boot partition as amicradle-network.txt.
+// The card reads that file at its first start, applies it, and takes the passwords out of it.
+type Net struct {
+	Hostname    string `json:"hostname"`
+	Country     string `json:"country"`
+	SSID        string `json:"ssid"`
+	WifiPass    string `json:"wifiPassword"`
+	SSHPass     string `json:"sshPassword"`
+}
+
+func (n *Net) empty() bool { return n == nil || n.Hostname+n.SSID+n.WifiPass+n.SSHPass == "" }
+
+func (n *Net) text() (string, error) {
+	for _, v := range []string{n.Hostname, n.Country, n.SSID, n.WifiPass, n.SSHPass} {
+		if strings.ContainsAny(v, "\r\n") || v != strings.TrimSpace(v) { return "", errors.New("A setting can't start or end with a space, or run over a line.") }
+	}
+	var b strings.Builder
+	b.WriteString("# Written by GFOS Imager. The card applies this at its first start and takes the passwords out.\n")
+	if n.Hostname != "" { b.WriteString("hostname = " + n.Hostname + "\n") }
+	if n.Country != "" { b.WriteString("country = " + strings.ToUpper(n.Country) + "\n") }
+	if n.SSID != "" {
+		if n.WifiPass != "" && (len(n.WifiPass) < 8 || len(n.WifiPass) > 63) { return "", errors.New("A Wi-Fi password is 8 to 63 characters.") }
+		b.WriteString("[wifi]\nssid = " + n.SSID + "\n")
+		if n.WifiPass != "" { b.WriteString("password = " + n.WifiPass + "\n") }
+	} else if n.WifiPass != "" { return "", errors.New("Give the Wi-Fi network's name with its password.") }
+	if n.SSHPass != "" {
+		if len(n.SSHPass) < 8 || len(n.SSHPass) > 256 { return "", errors.New("An SSH password is 8 to 256 characters.") }
+		b.WriteString("[ssh]\nenabled = yes\npassword = " + n.SSHPass + "\npassword_login = yes\n")
+	}
+	return b.String(), nil
+}
+
+const NetFile = "amicradle-network.txt"
+
 type Progress struct {
 	Phase string `json:"phase"` // idle, downloading, checking, waiting, writing, verifying, done, failed
 	Done  int64  `json:"done"`
@@ -81,9 +118,10 @@ func setProg(p Progress) { mu.Lock(); prog = p; mu.Unlock() }
 
 func main() {
 	list := flag.Bool("list", false, "print the drives that could be written to, and stop")
-	write := flag.String("write", "", "write this image file (.img or .img.gz); with -to")
+	write := flag.String("write", "", "write this image file (.img, .img.xz or .img.gz); with -to")
 	to := flag.String("to", "", "the drive to write to")
 	report := flag.String("report", "", "write progress to this file (used by the window)")
+	network := flag.String("network", "", "a file of network settings to put on the card as "+NetFile+" (it is deleted once read)")
 	flag.BoolVar(&testing, "testing", false, "for testers: allow writing to a real drive on a system not yet proven")
 	flag.BoolVar(&large, "large", false, "allow writing to a drive bigger than 256 GB")
 	flag.StringVar(&catalogue, "catalogue", DefaultCatalogue, "where the list of base images is (a URL or a file)")
@@ -98,7 +136,9 @@ func main() {
 			if *report == "" { fmt.Printf("\r%-10s %3d%% %s", p.Phase, pct(p), p.Note); return }
 			b, _ := json.Marshal(p); os.WriteFile(*report+".new", b, 0644); os.Rename(*report+".new", *report)
 		}
-		if err := writeImage(*write, *to, say); err != nil {
+		var settings []byte
+		if *network != "" { settings, _ = os.ReadFile(*network); os.Remove(*network) }
+		if err := writeImage(*write, *to, settings, say); err != nil {
 			say(Progress{Phase: "failed", Note: err.Error()}); fmt.Fprintln(os.Stderr, "\n"+err.Error()); os.Exit(1)
 		}
 		say(Progress{Phase: "done", Note: "Written and checked."}); fmt.Println()
@@ -134,13 +174,13 @@ func window() {
 		js(w, map[string]any{"version": Version, "system": runtime.GOOS, "catalogue": catalogue, "proven": Proven[runtime.GOOS], "testing": testing, "large": Large}, nil)
 	}))
 	mux.HandleFunc("/api/write", guard(func(w http.ResponseWriter, r *http.Request) {
-		var q struct{ Image *Image `json:"image"`; File, Drive string; Large bool }
+		var q struct{ Image *Image `json:"image"`; File, Drive string; Large bool; Net *Net `json:"net"` }
 		if r.Method != "POST" || json.NewDecoder(r.Body).Decode(&q) != nil || q.Drive == "" { js(w, nil, errors.New("Pick an image and a drive.")); return }
 		mu.Lock(); busy := prog.Phase != "idle" && prog.Phase != "done" && prog.Phase != "failed"; mu.Unlock()
 		if busy { js(w, nil, errors.New("Already working.")); return }
 		setProg(Progress{Phase: "checking"})
 		go func() {
-			if err := job(q.Image, q.File, q.Drive, q.Large); err != nil { setProg(Progress{Phase: "failed", Note: err.Error()}) }
+			if err := job(q.Image, q.File, q.Drive, q.Large, q.Net); err != nil { setProg(Progress{Phase: "failed", Note: err.Error()}) }
 		}()
 		js(w, map[string]bool{"started": true}, nil)
 	}))
@@ -168,7 +208,12 @@ func images() ([]Image, error) {
 }
 
 // job: get the image (download and check it, or take the person's own file), then have it written.
-func job(img *Image, file, drive string, big bool) error {
+func job(img *Image, file, drive string, big bool, net *Net) error {
+	var netText string
+	if !net.empty() {
+		t, err := net.text(); if err != nil { return err }
+		netText = t
+	}
 	if img != nil {
 		dir, _ := os.UserCacheDir(); dir = filepath.Join(dir, "gfos-imager"); os.MkdirAll(dir, 0755)
 		file = filepath.Join(dir, filepath.Base(img.File))
@@ -188,6 +233,12 @@ func job(img *Image, file, drive string, big bool) error {
 	args := []string{"-write", file, "-to", drive, "-report", rep}
 	if testing { args = append(args, "-testing") }
 	if big { args = append(args, "-large") }
+	if netText != "" { // passwords go to the writing copy in a file only this account can read, never on its command line
+		nf := filepath.Join(os.TempDir(), fmt.Sprintf("gfos-imager-%d.net", os.Getpid()))
+		if err := os.WriteFile(nf, []byte(netText), 0600); err != nil { return err }
+		defer os.Remove(nf)
+		args = append(args, "-network", nf)
+	}
 	go func() { done <- elevated(self, args...) }()
 	for {
 		select {
@@ -240,7 +291,7 @@ func hashFile(path string, tick func(int64)) (string, error) {
 // ---------------------------------------------------------------- the write itself (runs with administrator rights)
 const block = 4 << 20
 
-func writeImage(src, dev string, say func(Progress)) error {
+func writeImage(src, dev string, settings []byte, say func(Progress)) error {
 	var d *Drive
 	if strings.HasSuffix(dev, ".testdisk") { // a plain file standing in for a drive, for testing this program
 		st, err := os.Stat(dev); if err != nil { return err }
@@ -260,8 +311,9 @@ func writeImage(src, dev string, say func(Progress)) error {
 	defer in.Close()
 	st, _ := in.Stat(); total := st.Size()
 	var r io.Reader = in
-	packed := strings.HasSuffix(strings.ToLower(src), ".gz")
-	if packed { z, err := gzip.NewReader(in); if err != nil { return fmt.Errorf("That .gz can't be read: %v", err) }; r = z; total = 0
+	low := strings.ToLower(src)
+	if strings.HasSuffix(low, ".gz") { z, err := gzip.NewReader(in); if err != nil { return fmt.Errorf("That .gz can't be read: %v", err) }; r = z; total = 0
+	} else if strings.HasSuffix(low, ".xz") { z, err := xz.NewReader(bufio.NewReaderSize(in, 4<<20)); if err != nil { return fmt.Errorf("That .xz can't be read: %v", err) }; r = z; total = 0
 	} else if total > d.Size { return fmt.Errorf("The image (%.1f GB) is bigger than the drive (%.1f GB).", float64(total)/1e9, float64(d.Size)/1e9) }
 	if err := release(*d); err != nil { return fmt.Errorf("Couldn't free the drive for writing: %v", err) }
 	out, err := os.OpenFile(d.Path, os.O_RDWR, 0); if err != nil { return fmt.Errorf("Couldn't open the drive: %v", err) }
@@ -292,6 +344,12 @@ func writeImage(src, dev string, say func(Progress)) error {
 		h2.Write(buf[:k]); m += int64(k); say(Progress{Phase: "verifying", Done: m, Total: n})
 	}
 	if hex.EncodeToString(h2.Sum(nil)) != want { return errors.New("What's on the drive doesn't match the image. The drive may be failing: try another.") }
+	if len(settings) > 0 {
+		say(Progress{Phase: "settings", Done: n, Total: n})
+		var err error
+		if strings.HasSuffix(dev, ".testdisk") { err = os.WriteFile(dev+"."+NetFile, settings, 0600) } else { err = putOnBoot(*d, NetFile, settings) }
+		if err != nil { return fmt.Errorf("The image is written and checked, but your settings couldn't be put on the card: %v", err) }
+	}
 	eject(*d)
 	return nil
 }
