@@ -1,5 +1,8 @@
 # GFOS Imager
 
+> **Test build. Not for release.** It erases drives, and it has not yet been proven on a real card on any
+> system. Until it has, it refuses to write to a real drive unless started with `-testing`.
+
 Writes a GFOS base image to a USB drive, NVMe or SD card, on Windows, macOS, Linux and Raspberry Pi OS.
 
 1. Start it. Its window opens in your browser (the page is served only to your own computer).
@@ -28,3 +31,6 @@ Go 1.22 or newer, nothing else:
 
 Version 0.1. Written and tested on Linux against a stand-in drive. The Windows and macOS drive handling has
 been compiled but not yet run on a real machine, and no build has yet written a real card.
+
+Each system is switched on in `main.go` (`Proven`) only after a build has written a real card on it and that
+card has started a machine. Testers start it with `-testing`, on a drive they can afford to lose.

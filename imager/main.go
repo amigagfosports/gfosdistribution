@@ -30,6 +30,12 @@ import (
 )
 
 const Version = "0.1"
+
+// Proven: set true for a system only once a build has written a real card on it and that card has started a
+// machine. Until then this program refuses to write to a real drive on that system unless it's started with
+// -testing, which is for the people proving it.
+var Proven = map[string]bool{"linux": false, "windows": false, "darwin": false}
+var testing bool
 const DefaultCatalogue = "https://raw.githubusercontent.com/amigagfosports/gfosdistribution/main/images/index.json"
 
 //go:embed ui.html
@@ -74,6 +80,7 @@ func main() {
 	write := flag.String("write", "", "write this image file (.img or .img.gz); with -to")
 	to := flag.String("to", "", "the drive to write to")
 	report := flag.String("report", "", "write progress to this file (used by the window)")
+	flag.BoolVar(&testing, "testing", false, "for testers: allow writing to a real drive on a system not yet proven")
 	flag.StringVar(&catalogue, "catalogue", DefaultCatalogue, "where the list of base images is (a URL or a file)")
 	flag.Parse()
 	switch {
@@ -119,7 +126,7 @@ func window() {
 	mux.HandleFunc("/api/drives", guard(func(w http.ResponseWriter, r *http.Request) { v, err := drives(); if v == nil { v = []Drive{} }; js(w, v, err) }))
 	mux.HandleFunc("/api/progress", guard(func(w http.ResponseWriter, r *http.Request) { mu.Lock(); p := prog; mu.Unlock(); js(w, p, nil) }))
 	mux.HandleFunc("/api/about", guard(func(w http.ResponseWriter, r *http.Request) {
-		js(w, map[string]string{"version": Version, "system": runtime.GOOS, "catalogue": catalogue}, nil)
+		js(w, map[string]any{"version": Version, "system": runtime.GOOS, "catalogue": catalogue, "proven": Proven[runtime.GOOS], "testing": testing}, nil)
 	}))
 	mux.HandleFunc("/api/write", guard(func(w http.ResponseWriter, r *http.Request) {
 		var q struct{ Image *Image `json:"image"`; File, Drive string }
@@ -173,7 +180,9 @@ func job(img *Image, file, drive string) error {
 	setProg(Progress{Phase: "waiting", Note: "Your system is asking you to allow the write."})
 	self, _ := os.Executable()
 	done := make(chan error, 1)
-	go func() { done <- elevated(self, "-write", file, "-to", drive, "-report", rep) }()
+	args := []string{"-write", file, "-to", drive, "-report", rep}
+	if testing { args = append(args, "-testing") }
+	go func() { done <- elevated(self, args...) }()
 	for {
 		select {
 		case err := <-done:
@@ -231,6 +240,9 @@ func writeImage(src, dev string, say func(Progress)) error {
 		st, err := os.Stat(dev); if err != nil { return err }
 		d = &Drive{Path: dev, Name: "test file", Size: st.Size()}
 	} else {
+		if !Proven[runtime.GOOS] && !testing {
+			return errors.New("This is a test build: writing to a real drive isn't switched on for this system yet. It hasn't been proven on a real card.")
+		}
 		ds, err := drives(); if err != nil { return err }
 		for i := range ds { if ds[i].Path == dev { d = &ds[i] } }
 		if d == nil { return fmt.Errorf("%s isn't a removable drive this program may write to.", dev) }
