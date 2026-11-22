@@ -56,6 +56,24 @@ func release(d Drive) error {
 
 func eject(d Drive) { run("sync") }
 
+// putOnBoot: a file onto the card's FAT (boot) partition.
+func putOnBoot(d Drive, name string, data []byte) error {
+	run("partprobe", d.Path); run("udevadm", "settle")
+	out, _ := run("lsblk", "-ln", "-o", "PATH,FSTYPE", d.Path)
+	part := ""
+	for _, l := range strings.Split(out, "\n") {
+		if f := strings.Fields(l); len(f) == 2 && f[1] == "vfat" && part == "" { part = f[0] }
+	}
+	if part == "" { return errors.New("the card has no FAT partition to put them on") }
+	dir, err := os.MkdirTemp("", "gfos-imager-boot"); if err != nil { return err }
+	defer os.Remove(dir)
+	if _, err := run("mount", "-t", "vfat", part, dir); err != nil { return err }
+	werr := os.WriteFile(dir+"/"+name, data, 0600)
+	run("sync")
+	if _, err := run("umount", dir); err != nil && werr == nil { werr = err }
+	return werr
+}
+
 func elevated(self string, args ...string) error {
 	if os.Geteuid() == 0 { _, err := run(self, args...); return err }
 	if _, err := exec.LookPath("pkexec"); err != nil {
@@ -66,3 +84,17 @@ func elevated(self string, args ...string) error {
 }
 
 func openBrowser(url string) { exec.Command("xdg-open", url).Start() }
+
+// pickFile: the desktop's own "open a file" window. Empty: the person closed it without choosing.
+func pickFile() (string, error) {
+	if _, err := exec.LookPath("zenity"); err == nil {
+		out, _ := exec.Command("zenity", "--file-selection", "--title=Choose the image",
+			"--file-filter=Images | *.img *.img.xz *.img.gz *.xz *.gz", "--file-filter=All files | *").Output()
+		return strings.TrimSpace(string(out)), nil
+	}
+	if _, err := exec.LookPath("kdialog"); err == nil {
+		out, _ := exec.Command("kdialog", "--getopenfilename", os.Getenv("HOME"), "*.img *.xz *.gz|Images").Output()
+		return strings.TrimSpace(string(out)), nil
+	}
+	return "", errors.New("This desktop has no file chooser to open: type or paste where the file is.")
+}
