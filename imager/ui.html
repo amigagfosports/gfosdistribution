@@ -2,27 +2,27 @@
 <html lang="en"><head><meta charset="utf-8"><title>GFOS Imager</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  :root { --bg:#10141b; --card:#19202b; --line:#2b3545; --ink:#e7ecf3; --dim:#93a0b4; --go:#3d8bfd; --ok:#39b980; --bad:#e5604d; }
+  :root { --head:#0a1626; --bg:#f1f5fa; --card:#fff; --line:#d6e0eb; --ink:#12202f; --dim:#627488; --go:#1683e0; --ok:#108c52; --bad:#ce2632; --sel:#e1f0ff; }
   * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.45 system-ui, "Segoe UI", sans-serif; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.4 Inter, "Segoe UI", system-ui, sans-serif; }
+  header { background:var(--head); color:#e2ecf7; padding:10px 24px; border-bottom:3px solid var(--go); font-size:20px; font-weight:600; }
+  header small { color:#96acc4; font-size:14px; font-weight:400; margin-left:8px; }
   main { max-width: 760px; margin: 0 auto; padding: 28px 18px 60px; }
-  h1 { font-size: 26px; margin: 0 0 4px; } h1 small { color:var(--dim); font-size:14px; font-weight:400; }
   p.lead { color:var(--dim); margin:0 0 22px; }
   section { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px 18px; margin-bottom:14px; }
-  h2 { font-size:17px; margin:0 0 10px; } h2 b { display:inline-block; width:26px; height:26px; line-height:26px; text-align:center; border-radius:50%; background:var(--line); margin-right:8px; font-size:14px; }
+  h2 { font-size:17px; margin:0 0 10px; } h2 b { display:inline-block; width:26px; height:26px; line-height:26px; text-align:center; border-radius:50%; background:var(--go); color:#fff; margin-right:8px; font-size:14px; }
   .pick { display:block; width:100%; text-align:left; background:none; color:inherit; font:inherit; border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin:6px 0; cursor:pointer; }
-  .pick:hover { border-color:var(--dim); } .pick.on { border-color:var(--go); background:#1d2a40; }
+  .pick:hover { border-color:var(--dim); } .pick.on { border-color:var(--go); background:var(--sel); }
   .pick span { color:var(--dim); font-size:14px; display:block; }
   .tabs button { background:none; border:1px solid var(--line); color:var(--ink); border-radius:16px; padding:4px 13px; margin:0 6px 8px 0; cursor:pointer; font:inherit; font-size:14px; }
-  .tabs button.on { background:var(--go); border-color:var(--go); }
+  .tabs button.on { background:var(--go); border-color:var(--go); color:#fff; }
   input[type=text] { width:100%; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:9px 11px; font:inherit; }
   .dim { color:var(--dim); font-size:14px; } .bad { color:var(--bad); } .ok { color:var(--ok); }
   button.go { background:var(--go); color:#fff; border:0; border-radius:8px; padding:11px 22px; font:inherit; font-weight:600; cursor:pointer; }
   button.go:disabled { opacity:.4; cursor:default; } button.link { background:none; border:0; color:var(--go); cursor:pointer; font:inherit; padding:0; }
   .bar { height:14px; background:var(--bg); border-radius:7px; overflow:hidden; margin:10px 0 6px; } .bar i { display:block; height:100%; width:0; background:var(--go); transition:width .3s; }
   label { display:block; margin:10px 0; }
-</style></head><body><main>
-<h1>GFOS Imager <small id="ver"></small></h1>
+</style></head><body><header>GFOS Imager <small id="ver"></small></header><main>
 <p class="lead">Writes a GFOS base image to a USB drive, NVMe or SD card. The base image starts your machine; GFOS fetches the rest once it's running.</p>
 
 <section id="warn" hidden style="border-color:var(--bad)"><b class="bad">Test build, not for release.</b> <span id="warnsay"></span></section>
@@ -89,6 +89,6 @@ $("#go").onclick = async () => {
 };
 $("#file").oninput = () => { if ($("#file").value.trim()) { image = null; showImages(); } ready(); };
 $("#sure").onchange = ready; $("#big").onchange = loadDrives; $("#again").onclick = loadDrives;
-$("#quit").onclick = async () => { try { await api("/api/quit"); } catch (e) {} document.body.innerHTML = "<main><h1>GFOS Imager is closed.</h1><p class='lead'>You can close this tab.</p></main>"; };
+$("#quit").onclick = async () => { try { await api("/api/quit"); } catch (e) {} document.body.innerHTML = "<header>GFOS Imager is closed.</header><main><p class='lead'>You can close this tab.</p></main>"; };
 api("/api/about").then(a => { $("#ver").textContent = a.version; if (!a.proven) { $("#warn").hidden = false; $("#warnsay").textContent = a.testing ? "Writing is switched on for testing. It has not been proven on this system: use a drive you can afford to lose." : "It hasn't been proven on a real card on this system, so it won't write to a drive yet."; } }); loadImages(); loadDrives();
 </script></body></html>
