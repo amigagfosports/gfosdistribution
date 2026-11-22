@@ -35,7 +35,11 @@ const Version = "0.1"
 // machine. Until then this program refuses to write to a real drive on that system unless it's started with
 // -testing, which is for the people proving it.
 var Proven = map[string]bool{"linux": false, "windows": false, "darwin": false}
-var testing bool
+var testing, large bool
+
+// Large: a drive bigger than this is more likely somebody's backup disk than a card to write, so it's kept out
+// of the list, and refused, unless asked for (the "Show large drives" tick, or -large).
+const Large = 256e9
 const DefaultCatalogue = "https://raw.githubusercontent.com/amigagfosports/gfosdistribution/main/images/index.json"
 
 //go:embed ui.html
@@ -81,6 +85,7 @@ func main() {
 	to := flag.String("to", "", "the drive to write to")
 	report := flag.String("report", "", "write progress to this file (used by the window)")
 	flag.BoolVar(&testing, "testing", false, "for testers: allow writing to a real drive on a system not yet proven")
+	flag.BoolVar(&large, "large", false, "allow writing to a drive bigger than 256 GB")
 	flag.StringVar(&catalogue, "catalogue", DefaultCatalogue, "where the list of base images is (a URL or a file)")
 	flag.Parse()
 	switch {
@@ -126,16 +131,16 @@ func window() {
 	mux.HandleFunc("/api/drives", guard(func(w http.ResponseWriter, r *http.Request) { v, err := drives(); if v == nil { v = []Drive{} }; js(w, v, err) }))
 	mux.HandleFunc("/api/progress", guard(func(w http.ResponseWriter, r *http.Request) { mu.Lock(); p := prog; mu.Unlock(); js(w, p, nil) }))
 	mux.HandleFunc("/api/about", guard(func(w http.ResponseWriter, r *http.Request) {
-		js(w, map[string]any{"version": Version, "system": runtime.GOOS, "catalogue": catalogue, "proven": Proven[runtime.GOOS], "testing": testing}, nil)
+		js(w, map[string]any{"version": Version, "system": runtime.GOOS, "catalogue": catalogue, "proven": Proven[runtime.GOOS], "testing": testing, "large": Large}, nil)
 	}))
 	mux.HandleFunc("/api/write", guard(func(w http.ResponseWriter, r *http.Request) {
-		var q struct{ Image *Image `json:"image"`; File, Drive string }
+		var q struct{ Image *Image `json:"image"`; File, Drive string; Large bool }
 		if r.Method != "POST" || json.NewDecoder(r.Body).Decode(&q) != nil || q.Drive == "" { js(w, nil, errors.New("Pick an image and a drive.")); return }
 		mu.Lock(); busy := prog.Phase != "idle" && prog.Phase != "done" && prog.Phase != "failed"; mu.Unlock()
 		if busy { js(w, nil, errors.New("Already working.")); return }
 		setProg(Progress{Phase: "checking"})
 		go func() {
-			if err := job(q.Image, q.File, q.Drive); err != nil { setProg(Progress{Phase: "failed", Note: err.Error()}) }
+			if err := job(q.Image, q.File, q.Drive, q.Large); err != nil { setProg(Progress{Phase: "failed", Note: err.Error()}) }
 		}()
 		js(w, map[string]bool{"started": true}, nil)
 	}))
@@ -163,7 +168,7 @@ func images() ([]Image, error) {
 }
 
 // job: get the image (download and check it, or take the person's own file), then have it written.
-func job(img *Image, file, drive string) error {
+func job(img *Image, file, drive string, big bool) error {
 	if img != nil {
 		dir, _ := os.UserCacheDir(); dir = filepath.Join(dir, "gfos-imager"); os.MkdirAll(dir, 0755)
 		file = filepath.Join(dir, filepath.Base(img.File))
@@ -182,6 +187,7 @@ func job(img *Image, file, drive string) error {
 	done := make(chan error, 1)
 	args := []string{"-write", file, "-to", drive, "-report", rep}
 	if testing { args = append(args, "-testing") }
+	if big { args = append(args, "-large") }
 	go func() { done <- elevated(self, args...) }()
 	for {
 		select {
@@ -246,6 +252,9 @@ func writeImage(src, dev string, say func(Progress)) error {
 		ds, err := drives(); if err != nil { return err }
 		for i := range ds { if ds[i].Path == dev { d = &ds[i] } }
 		if d == nil { return fmt.Errorf("%s isn't a removable drive this program may write to.", dev) }
+		if float64(d.Size) > Large && !large {
+			return fmt.Errorf("%s is %.0f GB: a drive that big is only written to when you ask for large drives.", dev, float64(d.Size)/1e9)
+		}
 	}
 	in, err := os.Open(src); if err != nil { return err }
 	defer in.Close()
