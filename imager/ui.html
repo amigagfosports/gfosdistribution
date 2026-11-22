@@ -35,6 +35,7 @@
 <section><h2><b>2</b>Choose the drive</h2>
   <div id="drives" class="dim">Looking for drives…</div>
   <p class="dim">Only removable drives are shown, never the one this computer runs from. <button class="link" id="again">Look again</button></p>
+  <label class="dim"><input type="checkbox" id="big"> Show large drives (over 256 GB). <span id="hid"></span></label>
 </section>
 
 <section><h2><b>3</b>Write it</h2>
@@ -64,7 +65,9 @@ function showImages() {
 async function loadImages() { try { all = await api("/api/images") || []; showImages(); } catch (e) { $("#images").innerHTML = `<span class="bad">${esc(e.message)}</span> You can still use a file of your own below.`; } }
 async function loadDrives() {
   try {
-    const ds = await api("/api/drives"); if (!ds.some(d => d.path === drive)) drive = "";
+    const every = await api("/api/drives"), ds = every.filter(d => $("#big").checked || d.size <= 256e9);
+    $("#hid").textContent = every.length > ds.length ? `${every.length - ds.length} hidden: probably not a card.` : "";
+    if (!ds.some(d => d.path === drive)) drive = "";
     $("#drives").innerHTML = ds.map(d => `<button class="pick ${d.path === drive ? "on" : ""}" data-d="${esc(d.path)}"><b>${esc(d.name)}</b><span>${gb(d.size)} · ${esc(d.via || "removable")} · ${esc(d.path)}</span></button>`).join("") || `<span class="dim">No removable drive found. Plug one in and look again.</span>`;
     document.querySelectorAll("[data-d]").forEach(b => b.onclick = () => { drive = b.dataset.d; loadDrives(); });
   } catch (e) { $("#drives").innerHTML = `<span class="bad">${esc(e.message)}</span>`; }
@@ -81,11 +84,11 @@ async function watch() {
 }
 $("#go").onclick = async () => {
   busy = true; ready(); $("#work").hidden = false; $("#fill").style.width = "0"; $("#say").textContent = "Starting…";
-  try { await api("/api/write", { image: $("#file").value.trim() ? null : image, file: $("#file").value.trim(), drive }); watch(); }
+  try { await api("/api/write", { image: $("#file").value.trim() ? null : image, file: $("#file").value.trim(), drive, large: $("#big").checked }); watch(); }
   catch (e) { busy = false; $("#say").innerHTML = `<span class="bad">${esc(e.message)}</span>`; ready(); }
 };
 $("#file").oninput = () => { if ($("#file").value.trim()) { image = null; showImages(); } ready(); };
-$("#sure").onchange = ready; $("#again").onclick = loadDrives;
+$("#sure").onchange = ready; $("#big").onchange = loadDrives; $("#again").onclick = loadDrives;
 $("#quit").onclick = async () => { try { await api("/api/quit"); } catch (e) {} document.body.innerHTML = "<main><h1>GFOS Imager is closed.</h1><p class='lead'>You can close this tab.</p></main>"; };
 api("/api/about").then(a => { $("#ver").textContent = a.version; if (!a.proven) { $("#warn").hidden = false; $("#warnsay").textContent = a.testing ? "Writing is switched on for testing. It has not been proven on this system: use a drive you can afford to lose." : "It hasn't been proven on a real card on this system, so it won't write to a drive yet."; } }); loadImages(); loadDrives();
 </script></body></html>
