@@ -9,6 +9,16 @@
    "url": "https://github.com/amigagfosports/gfosdistribution/releases/download/AmiPortAtlas-0.4.0-rc1/AmiPortAtlas-0.4.0-rc1.lha",
    "notes": "Release candidate of the games launcher: systray commodity, full screen joystick mode, Play for games on the Games drive, Ports/WHDLoad/Itch.io/Aminet/Exclusive tabs, and the games index no longer stalls at start. 68040, AmigaOS 3.2+ or GFOS.",
    "released": "2026-11-23"
+  },
+  {
+   "name": "AmiPortAtlas",
+   "version": "0.4.0-rc2",
+   "file": "AmiPortAtlas-0.4.0-rc2.lha",
+   "size": 1583429,
+   "sha256": "6ffb89dc0c5e9ee73e94116e208eb85597399fd4e671ad811fdabfa4de73a9eb",
+   "url": "https://github.com/amigagfosports/gfosdistribution/releases/download/AmiPortAtlas-0.4.0-rc2/AmiPortAtlas-0.4.0-rc2.lha",
+   "notes": "Same program as RC1; the three icons are now Soft 3D to the icon standard (Dale OK 22:03 UK).",
+   "released": "2026-11-23"
   }
  ]
 }
