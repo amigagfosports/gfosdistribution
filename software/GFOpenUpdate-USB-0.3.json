@@ -1,0 +1,11 @@
+{
+ "kind": "software",
+ "name": "GFOpenUpdate-USB",
+ "version": "0.3",
+ "file": "GFOpenUpdate-0.3.zip",
+ "size": 197117,
+ "sha256": "3cb87b958021ea41d4c19fd143641945f4dd64a6339d6986986ae982eadd7fba",
+ "notes": "GFOpenUpdate 0.3 as a .zip for machines with no LhA: unzip onto a USB stick on a PC, then open the drawer from Workbench. Same files as GFOpenUpdate-0.3.lha.",
+ "released": "2026-11-24",
+ "url": "https://github.com/amigagfosports/gfosdistribution/releases/download/GFOpenUpdate-USB-0.3/GFOpenUpdate-0.3.zip"
+}
