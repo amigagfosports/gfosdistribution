@@ -39,16 +39,6 @@
    "url": "https://github.com/amigagfosports/gfosdistribution/releases/download/GFOpenUpdate-0.3/GFOpenUpdate-0.3.lha",
    "notes": "GFOpenUpdate 0.3: the GFOS updater, now reading gfosdistribution's software/index.txt (backlog AC-280). Double-click it: its window lists what gfosdistribution has against what is installed (newer, not installed, up to date); Install all or Install for one; each download is checked against the catalogue's size and SHA-256 before GFOpenUpTool INSTALL puts it in; offers a restart after an update. Shell: GFOpenUpdate LIST, GET=<Name>. Needs a 68040, AmigaOS 3.2+ or GFOS, GFOpenUp 0.8.30+ (httpget, GFOpenTLS, GFOpenCompress, GFOpenUpTool), network. Changed since 0.2: reads gfosdistribution (0.2 only GFOpenUp's own release, kept as fallback); installs software not yet installed; Install all; opens its window from its icon (an older one from WBStartup steps aside); restart offer. Lab t7-warmux-20261124 (Instance-32 copy): real catalogue listed, GFOpenSQLite fetched and SHA-256 matched. Built in the kitchen, job j20261124T225432-f3498a (os32-gcc16-open9), gfopenup e6f8e6a. The .lha holds a GF",
    "released": "2026-11-24"
-  },
-  {
-   "name": "GFOpenUpdate-USB",
-   "version": "0.3",
-   "file": "GFOpenUpdate-0.3.zip",
-   "size": 197117,
-   "sha256": "3cb87b958021ea41d4c19fd143641945f4dd64a6339d6986986ae982eadd7fba",
-   "url": "https://github.com/amigagfosports/gfosdistribution/releases/download/GFOpenUpdate-USB-0.3/GFOpenUpdate-0.3.zip",
-   "notes": "GFOpenUpdate 0.3 as a .zip for machines with no LhA: unzip onto a USB stick on a PC, then open the drawer from Workbench. Same files as GFOpenUpdate-0.3.lha.",
-   "released": "2026-11-24"
   }
  ]
 }
