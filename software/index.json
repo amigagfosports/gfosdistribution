@@ -31,6 +31,16 @@
    "released": "2026-11-24"
   },
   {
+   "name": "WarMUX",
+   "version": "11.04.1svn-amigaos3-rc2",
+   "file": "WarMUX-11.04.1svn-amigaos3-68040.lha",
+   "size": 98771672,
+   "sha256": "6f947aaa2b9e0e2dec4be8946fc09f05743e96307ec5f452af7205e0bc5bd59e",
+   "url": "https://github.com/amigagfosports/gfosdistribution/releases/download/WarMUX-11.04.1svn-amigaos3-rc2/WarMUX-11.04.1svn-amigaos3-68040.lha",
+   "notes": "WarMUX (trunk after 11.04.1), the turn-based worm battle game, for AmigaOS 3.2+/GFOS: one 68040 soft-float program on GFOpenGPU's SDL 2 modules (the modules need an FPU, so the Installer asks for one). Single-computer play only (against the computer or friends taking turns); no network play in this build. Built from main 04b32fe1 on os32-gcc16-open9.",
+   "released": "2026-11-25"
+  },
+  {
    "name": "GFOpenUpdate",
    "version": "0.3",
    "file": "GFOpenUpdate-0.3.lha",
