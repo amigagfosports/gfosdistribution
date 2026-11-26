@@ -49,6 +49,16 @@
    "url": "https://github.com/amigagfosports/gfosdistribution/releases/download/GFOpenUpdate-0.3/GFOpenUpdate-0.3.lha",
    "notes": "GFOpenUpdate 0.3: the GFOS updater, now reading gfosdistribution's software/index.txt (backlog AC-280). Double-click it: its window lists what gfosdistribution has against what is installed (newer, not installed, up to date); Install all or Install for one; each download is checked against the catalogue's size and SHA-256 before GFOpenUpTool INSTALL puts it in; offers a restart after an update. Shell: GFOpenUpdate LIST, GET=<Name>. Needs a 68040, AmigaOS 3.2+ or GFOS, GFOpenUp 0.8.30+ (httpget, GFOpenTLS, GFOpenCompress, GFOpenUpTool), network. Changed since 0.2: reads gfosdistribution (0.2 only GFOpenUp's own release, kept as fallback); installs software not yet installed; Install all; opens its window from its icon (an older one from WBStartup steps aside); restart offer. Lab t7-warmux-20261124 (Instance-32 copy): real catalogue listed, GFOpenSQLite fetched and SHA-256 matched. Built in the kitchen, job j20261124T225432-f3498a (os32-gcc16-open9), gfopenup e6f8e6a. The .lha holds a GF",
    "released": "2026-11-24"
+  },
+  {
+   "name": "Stream3D",
+   "version": "0.34-rc1",
+   "file": "Stream3D-0.34-rc1.zip",
+   "size": 409388,
+   "sha256": "934de63ea37cfb537bedbe41934db7dce6a218ba035d11cc714b76f4afc4bcc4",
+   "url": "https://github.com/amigagfosports/gfosdistribution/releases/download/Stream3D-0.34-rc1/Stream3D-0.34-rc1.zip",
+   "notes": "Release candidate of Stream3D, GFOpenGPU's own 3D route. Publish this one, not 0.33-rc1 or 0.33-rc2.\n\nMiniGL and Warp3D programs draw on AmiCradle's host graphics chip without virgl or Mesa's GL. Stream3D is on by default wherever the host draws it on its GPU, as a PC's graphics card does. Where the host would draw it on its CPU, as the Raspberry Pi cards do today, programs take virgl on the host's chip instead, which is faster there.\n\nTo turn Stream3D off, use SetEnv MiniGL/Driver Virgl or Warp3D/Driver Virgl for one API, or GFOpenGPU/Driver Virgl for every API. SetEnv GFOpenGPU/Driver ACRTG takes Stream3D even on a host CPU.\n\nContents:\n- gfopengpu.library 0.34\n- minigl.library 30.0: no 50 fps cap, vertices transformed by the host, next batch built while the host draws.\n\nGL.module and TinyGL stay on virgl.\n\nGLQuake timedemo at 640x480, with what 0.34 picks by itself:\n- PC lab, RX 460: Stream3D, 131.3 fps\n- Pi 5: virgl, 64.8 fps\n- CM5: virgl, 55.3 fps\n- CM4: virgl, 12.7 fps\n\n0.33 took ",
+   "released": "2026-11-26"
   }
  ]
 }
