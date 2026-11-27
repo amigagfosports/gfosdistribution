@@ -1,0 +1,11 @@
+{
+ "kind": "software",
+ "name": "AmiCradle-runtime-x86-stream3d",
+ "version": "0.34-rc1",
+ "file": "AmiCradle-runtime-x86-stream3d-rc1d.tar.gz",
+ "size": 14173760,
+ "sha256": "1584f55ccce2c683e2bffc51de51106c7963b6a63ec6b42c771b950bb9d80e48",
+ "notes": "AmiCradle runtime for the x86 appliance, Stream3D RC1: the whole tuned set (zen, intel, v2 and portable) with one build stamp; the installer checks every SHA-256 and clears stale tuned files. GLQuake timedemo 640x480 on an RX 580: 201 fps (same speed as RC3).",
+ "released": "2026-11-27",
+ "url": "https://github.com/amigagfosports/gfosdistribution/releases/download/AmiCradle-runtime-x86-stream3d-0.34-rc1/AmiCradle-runtime-x86-stream3d-rc1d.tar.gz"
+}
