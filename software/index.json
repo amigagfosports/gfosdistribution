@@ -69,6 +69,16 @@
    "url": "https://github.com/amigagfosports/gfosdistribution/releases/download/AmiCradle-runtime-x86-stream3d-0.34-rc1/AmiCradle-runtime-x86-stream3d-rc1d.tar.gz",
    "notes": "AmiCradle runtime for the x86 appliance, Stream3D RC1: the whole tuned set (zen, intel, v2 and portable) with one build stamp; the installer checks every SHA-256 and clears stale tuned files. GLQuake timedemo 640x480 on an RX 580: 201 fps (same speed as RC3).",
    "released": "2026-11-27"
+  },
+  {
+   "name": "AmiCradle-runtime-arm64-stream3d",
+   "version": "0.34-rc1",
+   "file": "AmiCradle-runtime-arm64-stream3d-rc1d.tar.gz",
+   "size": 9866937,
+   "sha256": "ed3a5f4012651e6a1d98fe81e2620d508bec4279046858605b034734b5affaf1",
+   "url": "https://github.com/amigagfosports/gfosdistribution/releases/download/AmiCradle-runtime-arm64-stream3d-0.34-rc1/AmiCradle-runtime-arm64-stream3d-rc1d.tar.gz",
+   "notes": "AmiCradle runtime for Pi 5, CM5 and CM4 cards, Stream3D RC1: the whole tuned set (a76, a72 and portable) with one build stamp; the installer checks every SHA-256 and clears stale tuned files. GLQuake timedemo 640x480 on a CM4: 20.6 fps (same speed as RC3).",
+   "released": "2026-11-27"
   }
  ]
 }
