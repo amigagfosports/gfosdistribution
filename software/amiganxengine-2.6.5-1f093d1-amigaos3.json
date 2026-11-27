@@ -1,0 +1,11 @@
+{
+ "kind": "software",
+ "name": "amiganxengine",
+ "version": "2.6.5-1f093d1-amigaos3",
+ "file": "nxengine-evo-2.6.5-1f093d1-amigaos3-68040.lha",
+ "size": 8702235,
+ "sha256": "ed2fd2be0c1b34d70158543e94d5b82006c437ab3540dac02d101ec0ded6487f",
+ "notes": "NXEngine-evo for AmigaOS 3.2 and GFOS on 68040/68060 with FPU, GFOpenGPU SDL2 and AHI. Cave Story and Boss Rush have separate GlowIcons and share a 320x240 engine. Includes the native Installer, ReadMe, corresponding GPLv3 source and third-party codec notices. Game data is downloaded separately.",
+ "released": "2026-11-27",
+ "url": "https://github.com/amigagfosports/gfosdistribution/releases/download/amiganxengine-2.6.5-1f093d1-amigaos3/nxengine-evo-2.6.5-1f093d1-amigaos3-68040.lha"
+}
